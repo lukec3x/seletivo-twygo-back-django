@@ -21,6 +21,8 @@ class CourseViewSet(viewsets.ViewSet):
       return CourseRetrieveSerializer
     elif self.action == 'update_video':
       return CourseRetrieveSerializer
+    elif self.action == 'destroy_video':
+      return CourseRetrieveSerializer
     return CourseSerializer
 
   def list(self, request, *args, **kwargs):
@@ -122,9 +124,23 @@ class CourseViewSet(viewsets.ViewSet):
     return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-  def destroy_video(self, request, pk=None, *args, **kwargs):
-    pass
+  def destroy_video(self, request, course_id=None, video_id=None, *args, **kwargs):
+    try:
+      course = Course.objects.get(pk=course_id)
+    except Course.DoesNotExist:
+      return Response(status=status.HTTP_404_NOT_FOUND)
 
+    video_urls_before_delete = course.video_urls
+    course.video_urls = [v for v in course.video_urls if v['id'] != video_id]
+
+    if course.video_urls == video_urls_before_delete:
+      return Response(status=status.HTTP_404_NOT_FOUND)
+
+    course.total_duration = self._calc_total_duration(course.video_urls)
+    course.save()
+
+    serializer = self.get_serializer_class()(course)
+    return Response(serializer.data, status=status.HTTP_200_OK)
 
   def export(self, request, *args, **kwargs):
     pass

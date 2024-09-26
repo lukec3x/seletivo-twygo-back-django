@@ -272,7 +272,7 @@ class CourseViewTestCase(TestCase):
     self.assertNotEqual(Course.objects.get(pk=self.course2.id).video_urls[0]['url'], 'https://www.youtube.com/watch?v=123456789')
     self.assertEqual(len(Course.objects.get(pk=self.course2.id).video_urls), 2)
 
-  def test_update_destroy_course(self):
+  def test_destroy_course(self):
     request = self.client.delete(reverse_lazy('courses-detail', kwargs={'pk': self.course1.id}))
 
     self.assertEqual(request.status_code, 204)
@@ -280,7 +280,31 @@ class CourseViewTestCase(TestCase):
     self.assertEqual(len(Course.objects.filter(pk=self.course1.id)), 0)
 
   def test_destroy_video_course(self):
-    pass
+    request = self.client.delete(
+      reverse_lazy('courses-destroy_video',
+                   kwargs={'course_id': str(self.course2.id), 'video_id': self.course2.video_urls[0]['id']})
+    )
+
+    self.assertEqual(request.status_code, 200)
+    self.assertEqual(len(Course.objects.get(pk=self.course2.id).video_urls), 1)
+
+  def test_destroy_video_course_with_video_id_not_found(self):
+    request = self.client.delete(
+      reverse_lazy('courses-destroy_video',
+                   kwargs={'course_id': str(self.course2.id), 'video_id': 0})
+    )
+
+    self.assertEqual(request.status_code, 404)
+    self.assertEqual(len(Course.objects.get(pk=self.course2.id).video_urls), 2)
+  
+  def test_destroy_video_course_with_course_id_not_found(self):
+    request = self.client.delete(
+      reverse_lazy('courses-destroy_video',
+                   kwargs={'course_id': 0, 'video_id': self.course2.video_urls[0]['id']})
+    )
+
+    self.assertEqual(request.status_code, 404)
+    self.assertEqual(len(Course.objects.get(pk=self.course2.id).video_urls), 2)
 
   def test_export(self):
     pass
