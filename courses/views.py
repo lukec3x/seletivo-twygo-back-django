@@ -2,6 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from django.utils.dateparse import parse_duration
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from bs4 import BeautifulSoup
 import requests
@@ -73,7 +74,7 @@ class CourseViewSet(viewsets.ViewSet):
 
 
   def update(self, request, pk=None, *args, **kwargs):
-    course = Course.objects.get(pk=pk)
+    course = get_object_or_404(Course, pk=pk)
     serializer = CourseSerializer(course, data=request.data)
 
     if serializer.is_valid():
@@ -84,7 +85,7 @@ class CourseViewSet(viewsets.ViewSet):
 
 
   def partial_update(self, request, pk=None, *args, **kwargs):
-    course = Course.objects.get(pk=pk)
+    course = get_object_or_404(Course, pk=pk)
     serializer = CourseSerializer(course, data=request.data, partial=True)
 
     if not request.data:
@@ -101,7 +102,7 @@ class CourseViewSet(viewsets.ViewSet):
     if not request.data.get('title') or not request.data.get('url'):
       return Response(status=status.HTTP_400_BAD_REQUEST)
 
-    course = Course.objects.get(pk=course_id)
+    course = get_object_or_404(Course, pk=course_id)
     
     new_video_data = {
       'id': video_id,
@@ -110,7 +111,12 @@ class CourseViewSet(viewsets.ViewSet):
       'duration': self._get_video_duration(request.data.get('url'))
     }
 
+    video_urls_before_update = course.video_urls
     course.video_urls = [v if v['id'] != video_id else new_video_data for v in course.video_urls]
+    
+    if course.video_urls == video_urls_before_update:
+      return Response(status=status.HTTP_404_NOT_FOUND)
+    
     course.total_duration = self._calc_total_duration(course.video_urls)
     course.save()
 
@@ -119,16 +125,13 @@ class CourseViewSet(viewsets.ViewSet):
 
 
   def destroy(self, request, pk=None, *args, **kwargs):
-    course = Course.objects.get(pk=pk)
+    course = get_object_or_404(Course, pk=pk)
     course.delete()
     return Response(status=status.HTTP_204_NO_CONTENT)
 
 
   def destroy_video(self, request, course_id=None, video_id=None, *args, **kwargs):
-    try:
-      course = Course.objects.get(pk=course_id)
-    except Course.DoesNotExist:
-      return Response(status=status.HTTP_404_NOT_FOUND)
+    course = get_object_or_404(Course, pk=course_id)
 
     video_urls_before_delete = course.video_urls
     course.video_urls = [v for v in course.video_urls if v['id'] != video_id]
