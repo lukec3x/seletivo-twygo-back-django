@@ -24,7 +24,7 @@ class CourseViewSet(viewsets.ViewSet):
     return CourseSerializer
 
   def list(self, request, *args, **kwargs):
-    queryset = Course.objects.filter(ends_at__gte=timezone.now())
+    queryset = Course.objects.filter(ends_at__gte=timezone.now()).order_by('created_at')
 
     paginator = PageNumberPagination()
     result_page = paginator.paginate_queryset(queryset, request)
@@ -60,7 +60,6 @@ class CourseViewSet(viewsets.ViewSet):
     course.video_urls.append(video_data)
     course.total_duration = self._calc_total_duration(course.video_urls)
     course.save()
-
     serializer = self.get_serializer_class()(course)
     return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -85,6 +84,9 @@ class CourseViewSet(viewsets.ViewSet):
   def partial_update(self, request, pk=None, *args, **kwargs):
     course = Course.objects.get(pk=pk)
     serializer = CourseSerializer(course, data=request.data, partial=True)
+
+    if not request.data:
+      return Response(status=status.HTTP_400_BAD_REQUEST)
 
     if serializer.is_valid():
       serializer.save()
