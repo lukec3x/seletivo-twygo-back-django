@@ -6,6 +6,12 @@ class CourseManager(models.Manager):
   def get_queryset(self):
     return super().get_queryset().filter(deleted_at__isnull=True)
 
+
+class CourseWithDeletedManager(models.Manager):
+  def get_queryset(self):
+    return super().get_queryset().filter()
+
+
 class Course(models.Model):
   title = models.CharField(max_length=255)
   description = models.TextField()
@@ -17,6 +23,7 @@ class Course(models.Model):
   total_duration = models.CharField(max_length=255, default="0:0:0")
 
   objects = CourseManager()
+  with_deleted = CourseWithDeletedManager()
 
   def delete(self, *args, **kwargs):
     self.deleted_at = timezone.now()
