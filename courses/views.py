@@ -3,10 +3,13 @@ from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from django.utils.dateparse import parse_duration
 from django.shortcuts import get_object_or_404
+from django.http import HttpResponse
 from django.utils import timezone
 from bs4 import BeautifulSoup
+from datetime import date
 import requests
 import uuid
+import csv
 import re
 
 from .models import Course
@@ -146,7 +149,17 @@ class CourseViewSet(viewsets.ViewSet):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
   def export(self, request, *args, **kwargs):
-    pass
+    courses = Course.with_deleted.all()
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="courses-{date.today()}.csv"'
+
+    writer = csv.writer(response, delimiter=';')
+    writer.writerow(['ID', 'Título', 'Descrição', 'Data de Término', 'Excluído', 'Excluído em', 'Criado em', 'Vídeos', 'Duração total'])
+
+    for course in courses:
+      writer.writerow([course.id, course.title, course.description, course.ends_at, course.is_deleted(), course.deleted_at, course.created_at, len(course.video_urls), course.total_duration])
+
+    return response
 
 
   def _get_video_duration(self, url):

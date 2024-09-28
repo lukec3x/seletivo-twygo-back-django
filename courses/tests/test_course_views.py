@@ -370,7 +370,10 @@ class CourseViewTestCase(TestCase):
     self.assertEqual(len(Course.objects.get(pk=self.course2.id).video_urls), 2)
 
   def test_export(self):
-    pass
+    request = self.client.get(reverse_lazy('courses-export'))
+
+    self.assertEqual(request.status_code, 200)
+    self.assertEqual(request['Content-Type'], 'text/csv')
 
   @patch('requests.get')
   def test_get_video_duration(self, mock_get):
